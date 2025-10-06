@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let filteredProducts = [];
   let cart = {};
 
-  // --------- SweetAlert base (opcional con tu paleta)
+  // --------- SweetAlert base (paleta dorada)
   const swalBase = {
     background: "#000000",
     color: "#FFD700",
@@ -35,6 +35,79 @@ document.addEventListener("DOMContentLoaded", () => {
     cancelButtonColor: "#666",
     iconColor: "#FFD700",
   };
+
+  // ================================
+  // POP-UP DE PROMOCIONES (solo 1 vez por día)
+  const PROMO_KEY_PREFIX = "promoShown-";
+  function promoKeyForToday() {
+    const d = new Date();
+    return `${PROMO_KEY_PREFIX}${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  }
+  function shouldShowPromoToday() {
+    return !localStorage.getItem(promoKeyForToday());
+  }
+  function markPromoShownToday() {
+    localStorage.setItem(promoKeyForToday(), "1");
+  }
+
+  async function showWelcomePromo() {
+    // Demo estático (puedes reemplazar por fetch a /api/promos)
+    const promos = [
+      // { title: "2×1 en Miniaturas", desc: "Combina tus aromas favoritos.", badge: "-50%", img: "https://via.placeholder.com/960x420?text=Promo+1" },
+      { title: "Dos perfumes por solo $190.000", desc: "Envío gratis en Bogotá por lanzamiento.", badge: "ENVÍO GRATIS", img: "img/lineagld.png" },
+      { title: "Personalizados", desc: "Precio especial por tiempo limitado.", badge: "Envío Gratis en Bogotá", img: "img/perfumes.png" }
+    ];
+
+    const slides = promos.map(p => `
+      <div style="margin-bottom:16px;border:1px solid rgba(212,175,55,.25);border-radius:12px;overflow:hidden;background:#0b0b0b">
+        <div style="position:relative">
+          <img src="${p.img}" alt="${p.title}" style="width:100%;display:block;max-height:240px;object-fit:cover">
+          <span style="
+            position:absolute;top:10px;left:10px;background:rgba(212,175,55,.9);
+            color:#000;padding:4px 8px;border-radius:999px;font-weight:800;font-size:.8rem;
+          ">${p.badge}</span>
+        </div>
+        <div style="padding:10px 12px">
+          <div style="font-weight:800;color:#f5d87f">${p.title}</div>
+          <div style="color:#b8b8b8;font-size:.95rem">${p.desc}</div>
+        </div>
+      </div>
+    `).join("");
+
+    Swal.fire({
+      ...swalBase,
+      title: "🎉 Bienvenido a Perfumes Durata Royal",
+      html: `
+        <div style="text-align:left;max-height:60vh;overflow:auto">
+          <p style="margin-top:0;color:#b8b8b8">
+            Aprovecha nuestras <strong style="color:#f5d87f">promociones de hoy</strong>:
+          </p>
+          ${slides}
+        </div>
+      `,
+    
+    }).then((res) => {
+      if (res.value === 1 || res.dismiss) markPromoShownToday();
+
+      if (res.isConfirmed) {
+        document.getElementById("productGrid")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  }
+
+  function initWelcomePromoPopup() {
+    if (!shouldShowPromoToday()) return;
+    setTimeout(() => {
+      const modalAbierto = !document.getElementById("productModal").classList.contains("hidden");
+      const drawerAbierto = document.getElementById("cartDrawer").classList.contains("open");
+      if (modalAbierto || drawerAbierto) {
+        setTimeout(initWelcomePromoPopup, 1500);
+        return;
+      }
+      showWelcomePromo();
+    }, 1000);
+  }
+  // ================================
 
   // --------- Cargar productos
   async function loadProducts() {
@@ -192,7 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
     updateCartCounter();
   });
 
-  // Drawer: con tu CSS basta con alternar .open
+  // Drawer (tu CSS usa clase .open)
   cartBtn.addEventListener("click", () => {
     cartDrawer.classList.add("open");
     cartDrawer.setAttribute("aria-hidden", "false");
@@ -320,9 +393,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   closeModal.addEventListener("click", closeProductModal);
-  // Cerrar modal con fondo (click fuera) y tecla ESC
+  // Cerrar modal con click en fondo y con ESC
   productModal.addEventListener("click", (e) => {
-    // si clic en el backdrop (fuera de .modal-card) cerramos
     const card = e.target.closest(".modal-card");
     if (!card) closeProductModal();
   });
@@ -390,5 +462,8 @@ document.addEventListener("DOMContentLoaded", () => {
   sortSelect.addEventListener("change", applyFilters);
 
   // --------- Inicio
-  loadProducts();
+  // Cargamos productos y luego inicializamos el pop-up de bienvenida
+  loadProducts().then(() => {
+    initWelcomePromoPopup();
+  });
 });
