@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="icon" type="image/png" href="img/favicon.jpeg">
+  <title>Perfumes Luian</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <div>
+          <img src="img/logo.smnall.jpeg" class="logo-header" alt="Logo Perfumes Luian">
+          <p class="tag">Elegancia en cada gota</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="wishBtn" class="btn ghost">Favoritos</button>
+        <button id="cartBtn" class="btn primary">
+          🛒 <span id="cartCounter">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section>
+      <div class="controls">
+        <input id="search" placeholder="Buscar perfumes..." />
+        <select id="sort">
+          <option value="popular">Popular</option>
+          <option value="price-asc">Precio ↑</option>
+          <option value="price-desc">Precio ↓</option>
+        </select>
+      </div>
+
+      <div id="productGrid" class="grid"></div>
+
+      <!-- 🔹 Paginación -->
+      <div class="pagination">
+        <button id="prevPage" class="btn ghost">⟨ Anterior</button>
+        <span id="pageInfo">Página 1</span>
+        <button id="nextPage" class="btn ghost">Siguiente ⟩</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Drawer carrito -->
+  <aside id="cartDrawer" class="drawer closed" aria-hidden="true">
+    <div class="drawer-header">
+      <h2>Tu carrito</h2>
+      <button id="closeCart" class="icon-btn">✕</button>
+    </div>
+    <div id="cartItems" class="drawer-body">
+      <p class="muted">Tu carrito está vacío</p>
+    </div>
+    <div class="drawer-footer">
+        <div class="total">Total: <strong id="cartTotal">$0.00</strong></div>
+
+        <input id="customerName" type="text" placeholder="Tu nombre" class="checkout-input">
+        <input id="customerAddress" type="text" placeholder="Tu dirección" class="checkout-input">
+        <input id="customerPhone" type="text" placeholder="Tu teléfono" class="checkout-input">
+
+        <div style="display:flex;gap:8px;margin-top:8px;">
+            <button id="clearCartBtn" class="btn ghost">Vaciar</button>
+            <button id="checkoutBtn" class="btn primary">Hacer Pedido</button>
+        </div>
+    </div>
+  </aside>
+  <div id="drawerOverlay" class="overlay hidden"></div>
+
+  <!-- Modal producto -->
+  <div id="productModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-card">
+      <button id="closeModal" class="icon-btn modal-close">✕</button>
+      <div class="modal-body">
+        <div class="carousel">
+          <button id="prevImg" class="carousel-nav">‹</button>
+          <img id="mainImg" src="" alt="" />
+          <button id="nextImg" class="carousel-nav">›</button>
+        </div>
+        <div class="thumbnails" id="thumbnails"></div>
+
+        <div class="modal-info">
+          <h3 id="modalName"></h3>
+          <p id="modalDesc"></p>
+          <div class="price-row">
+            <div class="price" id="modalPrice"></div>
+            <div>
+              <label>Cantidad</label>
+              <input id="modalQty" type="number" min="1" value="1" />
+            </div>
+          </div>
+          <div style="margin-top:12px">
+            <button id="modalAdd" class="btn primary">Agregar al carrito</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="modalOverlay" class="overlay hidden"></div>
+
+  <footer class="site-footer">
+    <div class="container">© <span id="year"></span> Perfumes Durata Royal — Demo</div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="app.js"></script>
+</body>
+</html>

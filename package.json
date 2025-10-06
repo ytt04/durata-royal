@@ -1,0 +1,28 @@
+{
+  "name": "tienda-perfumes",
+  "version": "1.0.0",
+  "description": "Proyecto completo de tienda de perfumes con frontend y backend (Node.js + Express + SQLite).",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "initdb": "node backend/init-db.js"
+  },
+  "keywords": [
+    "tienda",
+    "perfumes",
+    "nodejs",
+    "express",
+    "sqlite"
+  ],
+  "author": "Tu Nombre",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "nodemailer": "^7.0.6",
+    "sqlite3": "^5.1.7",
+    "sweetalert2": "^11.23.0"
+  },
+  "devDependencies": {},
+  "type": "commonjs"
+}
