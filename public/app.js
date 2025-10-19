@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Demo estático (puedes reemplazar por fetch a /api/promos)
     const promos = [
       // { title: "2×1 en Miniaturas", desc: "Combina tus aromas favoritos.", badge: "-50%", img: "https://via.placeholder.com/960x420?text=Promo+1" },
-      { title: "Dos perfumes por solo $190.000", desc: "Envío gratis en Bogotá por lanzamiento.", badge: "ENVÍO GRATIS", img: "img/lineagld.png" },
+      { title: "Dos perfumes por solo $190.000", desc: "Envío gratis en Bogotá por lanzamiento.", badge: "Envío Gratis en Bogotá", img: "img/lineagld.png" },
       { title: "Personalizados", desc: "Precio especial por tiempo limitado.", badge: "Envío Gratis en Bogotá", img: "img/perfumes.png" }
     ];
 
@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     Swal.fire({
       ...swalBase,
-      title: "🎉 Bienvenido a Perfumes Durata Royal",
+      title: "Bienvenido a Perfumes Durata Royal",
       html: `
         <div style="text-align:left;max-height:60vh;overflow:auto">
           <p style="margin-top:0;color:#b8b8b8">
@@ -393,7 +393,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   closeModal.addEventListener("click", closeProductModal);
-  // Cerrar modal con click en fondo y con ESC
   productModal.addEventListener("click", (e) => {
     const card = e.target.closest(".modal-card");
     if (!card) closeProductModal();
@@ -466,4 +465,78 @@ document.addEventListener("DOMContentLoaded", () => {
   loadProducts().then(() => {
     initWelcomePromoPopup();
   });
+  
+(() => {
+  const MSGS = [
+    { full: "🚚 ¡Envío gratis!",              short: "🚚 Envío gratis" },
+    { full: "Cambios y devoluciones fáciles", short: "Cambios fáciles" },
+    { full: "Paga contraentrega",             short: "Pago contraentrega" },
+    { full: "Atención 24/7",                  short: "Atención 24/7" }
+  ];
+
+  const SPEED_DESKTOP = 22;
+  const SPEED_MOBILE  = 20;
+
+  function debounce(fn, ms=200){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+
+  function makeChunk(isMobile){
+    const texts = MSGS.map(m => (isMobile ? m.short : m.full));
+    return texts.map((t,i) => {
+      const dot = (i < texts.length - 1) ? `<span class="promo-sep">•</span>` : "";
+      return `<span class="promo-item">${t}</span>${dot}`;
+    }).join("");
+  }
+
+  function buildTicker(){
+    const ticker = document.getElementById("promoTicker");
+    const rail   = document.getElementById("promoRail");
+    if(!ticker || !rail) return;
+
+    const isMobile = window.matchMedia("(max-width: 600px)").matches;
+    ticker.style.setProperty("--ticker-speed", (isMobile ? SPEED_MOBILE : SPEED_DESKTOP) + "s");
+
+    rail.innerHTML = "";
+    const track1 = document.createElement("div");
+    track1.className = "promo-track";
+    track1.innerHTML = makeChunk(isMobile);
+    rail.appendChild(track1);
+
+    const ensureLength = () => {
+      while (track1.scrollWidth < rail.offsetWidth * 2) {
+        track1.insertAdjacentHTML("beforeend", `<span class="promo-sep">•</span>` + makeChunk(isMobile));
+      }
+      const track2 = track1.cloneNode(true);
+      track2.classList.add("track-2");
+      rail.appendChild(track2);
+      const w1 = track1.scrollWidth;
+      track2.style.left = w1 + "px";
+    };
+    requestAnimationFrame(ensureLength);
+  }
+
+  function bindClose(){
+    const btn = document.getElementById("promoClose");
+    if(!btn || btn.dataset.bound) return;
+    btn.dataset.bound = "1";
+    btn.addEventListener("click", () => {
+      const el = document.getElementById("promoTicker");
+      if (el) el.remove();
+    });
+  }
+
+  function init(){
+    buildTicker();
+    bindClose();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+
+  window.addEventListener("resize", debounce(buildTicker, 200));
+  if (document.fonts?.ready) document.fonts.ready.then(buildTicker);
+})();
+
 });
