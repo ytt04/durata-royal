@@ -44,12 +44,12 @@ db.serialize(() => {
 
 function dbAll(sql, params = []) {
   return new Promise((res, rej) => {
-    db.all(sql, params, (err, rows) => err ? rej(err) : res(rows));
+    db.all(sql, params, (err, rows) => (err ? rej(err) : res(rows)));
   });
 }
 function dbGet(sql, params = []) {
   return new Promise((res, rej) => {
-    db.get(sql, params, (err, row) => err ? rej(err) : res(row));
+    db.get(sql, params, (err, row) => (err ? rej(err) : res(row)));
   });
 }
 function dbRun(sql, params = []) {
@@ -61,24 +61,30 @@ function dbRun(sql, params = []) {
   });
 }
 
-// ================================
-// Correo
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // SSL
   auth: {
     user: "perfumesdurataroyal@gmail.com",
-    pass: "aphj noff cnsj xksv" 
+    pass: "aphjnoffcnsjxksv"
   }
 });
+transporter
+  .verify()
+  .then(() => console.log("✅ SMTP listo para enviar"))
+  .catch((err) => console.error("❌ Error SMTP:", err));
 
-// ================================
-// Endpoints
 app.get("/api/products", async (req, res) => {
   try {
     const rows = await dbAll("SELECT * FROM products ORDER BY id");
-    const products = rows.map(r => {
+    const products = rows.map((r) => {
       let imgs = [];
-      try { imgs = JSON.parse(r.images || "[]"); } catch { imgs = []; }
+      try {
+        imgs = JSON.parse(r.images || "[]");
+      } catch {
+        imgs = [];
+      }
       return { ...r, images: imgs };
     });
     res.json(products);
@@ -114,21 +120,23 @@ app.post("/api/orders", async (req, res) => {
       );
     }
 
-    // 📧 Enviar correo
-    let html = `<h2>Nuevo Pedido</h2>
+    // 📧 Enviar correo (el from DEBE ser el mismo usuario autenticado)
+    const html = `<h2>Nuevo Pedido</h2>
       <p><b>Cliente:</b> ${customer}</p>
       <p><b>Dirección:</b> ${address}</p>
       <p><b>Teléfono:</b> ${phone}</p>
       <h3>Productos:</h3>
       <ul>
-        ${items.map(it => `<li>${it.name} (x${it.qty}) - $${(it.price * it.qty).toFixed(2)}</li>`).join("")}
+        ${items
+          .map((it) => `<li>${it.name ?? it.id} (x${it.qty}) - $${((it.price || 0) * (it.qty || 1)).toFixed(2)}</li>`)
+          .join("")}
       </ul>
       <p><b>Total:</b> $${total.toFixed(2)}</p>
       <p><b>Pedido ID:</b> ${orderId}</p>`;
 
     await transporter.sendMail({
-      from: '"Pedidos Perfumes" <yurleyloaiza42@gmail.com>',
-      to: "Julianandres353@gmail.com, yurleytur@gmail.com, Ducuara1988@gmail.com", 
+      from: 'Perfumes Durata Royal <perfumesdurataroyal@gmail.com>', // MISMO que auth.user
+      to: "Julianandres353@gmail.com, yurleytur@gmail.com, Ducuara1988@gmail.com",
       subject: "🛒 Nuevo Pedido de Perfumes",
       html
     });
@@ -149,7 +157,8 @@ app.get("/api/orders", async (req, res) => {
         `SELECT oi.quantity, p.id, p.name, p.price
          FROM order_items oi
          JOIN products p ON oi.product_id = p.id
-         WHERE oi.order_id = ?`, [o.id]
+         WHERE oi.order_id = ?`,
+        [o.id]
       );
       result.push({ ...o, items });
     }
