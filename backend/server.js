@@ -2,8 +2,14 @@
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
+const fs = require("fs");
 const cors = require("cors");
-const nodemailer = require("nodemailer");
+
+// 1) Cargar .env desde la RAÍZ (donde está el README)
+const envPath = path.join(__dirname, "..", ".env");
+require("dotenv").config({ path: envPath });
+// (debug opcional)
+console.log("[env] path:", envPath, "exists?", fs.existsSync(envPath), "| BREVO?", !!process.env.BREVO_API_KEY);
 
 const app = express();
 app.use(cors());
@@ -61,30 +67,63 @@ function dbRun(sql, params = []) {
   });
 }
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true, // SSL
-  auth: {
-    user: "perfumesdurataroyal@gmail.com",
-    pass: "aphjnoffcnsjxksv"
-  }
-});
-transporter
-  .verify()
-  .then(() => console.log("✅ SMTP listo para enviar"))
-  .catch((err) => console.error("❌ Error SMTP:", err));
+// ================================
+// Correo por API HTTPS (Brevo)
+const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 
+/** Enviar email usando la API de Brevo (no requiere librería extra en Node 18+) */
+async function sendEmailBrevo({ to, from, subject, html }) {
+  if (!BREVO_API_KEY) {
+    console.warn("⚠️ Falta BREVO_API_KEY. Se omite envío.");
+    return;
+  }
+
+  // Parsear "Nombre <email@dominio>"
+  const m = /^(.*)<(.+)>$/.exec(from) || [];
+  const sender = {
+    name: (m[1] || "").trim() || from,
+    email: (m[2] || from).trim()
+  };
+
+  // Formato que espera Brevo
+  const toList = to.map(email => ({ email }));
+
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "api-key": BREVO_API_KEY
+    },
+    body: JSON.stringify({
+      sender,
+      to: toList,
+      subject,
+      htmlContent: html
+    })
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Brevo error ${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
+// from/to (puedes dejarlos en .env)
+const MAIL_FROM = process.env.MAIL_FROM || "Perfumes Durata Royal <perfumesdurataroyal@gmail.com>";
+const MAIL_TO = (process.env.ORDER_TO || "Julianandres353@gmail.com, yurleytur@gmail.com, Ducuara1988@gmail.com")
+  .split(",")
+  .map(s => s.trim())
+  .filter(Boolean);
+
+// ================================
+// Endpoints
 app.get("/api/products", async (req, res) => {
   try {
     const rows = await dbAll("SELECT * FROM products ORDER BY id");
-    const products = rows.map((r) => {
+    const products = rows.map(r => {
       let imgs = [];
-      try {
-        imgs = JSON.parse(r.images || "[]");
-      } catch {
-        imgs = [];
-      }
+      try { imgs = JSON.parse(r.images || "[]"); } catch { imgs = []; }
       return { ...r, images: imgs };
     });
     res.json(products);
@@ -120,28 +159,31 @@ app.post("/api/orders", async (req, res) => {
       );
     }
 
-    // 📧 Enviar correo (el from DEBE ser el mismo usuario autenticado)
+    // Email (Brevo). Si no hay API key, no rompe el flujo.
     const html = `<h2>Nuevo Pedido</h2>
       <p><b>Cliente:</b> ${customer}</p>
       <p><b>Dirección:</b> ${address}</p>
       <p><b>Teléfono:</b> ${phone}</p>
       <h3>Productos:</h3>
       <ul>
-        ${items
-          .map((it) => `<li>${it.name ?? it.id} (x${it.qty}) - $${((it.price || 0) * (it.qty || 1)).toFixed(2)}</li>`)
-          .join("")}
+        ${items.map(it => `<li>${it.name ?? it.id} (x${it.qty}) - $${((it.price || 0) * (it.qty || 1)).toFixed(2)}</li>`).join("")}
       </ul>
       <p><b>Total:</b> $${total.toFixed(2)}</p>
       <p><b>Pedido ID:</b> ${orderId}</p>`;
 
-    await transporter.sendMail({
-      from: 'Perfumes Durata Royal <perfumesdurataroyal@gmail.com>', // MISMO que auth.user
-      to: "Julianandres353@gmail.com, yurleytur@gmail.com, Ducuara1988@gmail.com",
-      subject: "🛒 Nuevo Pedido de Perfumes",
-      html
-    });
+    try {
+      await sendEmailBrevo({
+        to: MAIL_TO,
+        from: MAIL_FROM, // debe estar verificado en Brevo → Settings > Senders
+        subject: "🛒 Nuevo Pedido de Perfumes",
+        html
+      });
+    } catch (e) {
+      console.error("❌ Error enviando correo (Brevo):", e.message);
+      // Si quieres, no rompas el flujo: podrías responder 202 y seguir
+    }
 
-    res.json({ message: "Pedido registrado y correo enviado", orderId });
+    res.json({ message: "Pedido registrado", orderId });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
